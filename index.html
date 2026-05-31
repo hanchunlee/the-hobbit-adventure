@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Middle-earth — Interactive Map</title>
+<meta content="Explore an interactive map of Tolkien's Middle-earth with over 100 events from The Silmarillion, The Hobbit, and The Lord of the Rings. Click markers, trace journeys, and discover the history of every age." name="description"/>
+<link href="https://hanchunlee.github.io/the-hobbit-adventure/" rel="canonical"/>
+<link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+<meta content="website" property="og:type"/>
+<meta content="Middle-earth — Interactive Map" property="og:title"/>
+<meta content="Explore an interactive map of Tolkien's Middle-earth with over 100 events from The Silmarillion, The Hobbit, and The Lord of the Rings." property="og:description"/>
+<meta content="https://hanchunlee.github.io/the-hobbit-adventure/" property="og:url"/>
+<meta content="https://hanchunlee.github.io/the-hobbit-adventure/og-image.jpg" property="og:image"/>
+<meta content="1200" property="og:image:width"/>
+<meta content="630" property="og:image:height"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Middle-earth — Interactive Map" name="twitter:title"/>
+<meta content="Explore an interactive map of Tolkien's Middle-earth with over 100 events from The Silmarillion, The Hobbit, and The Lord of the Rings." name="twitter:description"/>
+<meta content="https://hanchunlee.github.io/the-hobbit-adventure/og-image.jpg" name="twitter:image"/>
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Middle-earth Interactive Map",
+        "url": "https://hanchunlee.github.io/the-hobbit-adventure/",
+        "description": "An interactive map of Tolkien's Middle-earth with events from across the legendarium.",
+        "author": {
+            "@type": "Person",
+            "name": "Fraser Marlow",
+            "url": "https://github.com/frasermarlow"
+        }
+    }
+    </script>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+<style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+            background: #1a1a1a;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+            background: #2c2418;
+        }
+
+        /* Legend Panel */
+        #nav-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            z-index: 1100;
+            background: rgba(26, 26, 26, 0.92);
+            border-bottom: 1px solid #5a4a36;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .nav-link {
+            color: #8b7355;
+            text-decoration: none;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #e8d9b0;
+            background: rgba(139, 115, 85, 0.2);
+        }
+        .nav-title {
+            font-size: 15px;
+            color: #e8d9b0;
+            letter-spacing: 2px;
+        }
+        @media (max-width: 500px) {
+            .nav-title { display: none; }
+        }
+        #legend {
+            position: absolute;
+            top: 60px;
+            right: 16px;
+            z-index: 1000;
+            background: rgba(44, 36, 24, 0.95);
+            border: 2px solid #8b7355;
+            border-radius: 8px;
+            padding: 16px;
+            color: #d4c5a9;
+            max-width: 280px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            padding-bottom: 120px;
+        }
+
+        #legend h2 {
+            font-size: 16px;
+            color: #e8d9b0;
+            margin-bottom: 12px;
+            text-align: center;
+            border-bottom: 1px solid #8b7355;
+            padding-bottom: 8px;
+            padding-right: 32px;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        #legend-close {
+            position: absolute;
+            top: -4px;
+            right: 0;
+            background: none;
+            border: 1px solid #8b7355;
+            border-radius: 4px;
+            color: #a89070;
+            font-size: 18px;
+            cursor: pointer;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        #legend-close:hover {
+            color: #f0e6cc;
+            border-color: #d4c5a9;
+        }
+
+        .legend-category {
+            margin-bottom: 10px;
+        }
+
+        .legend-category-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 6px 0;
+            user-select: none;
+        }
+
+        .legend-category-header:hover {
+            color: #f0e6cc;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            flex-shrink: 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .legend-category-label {
+            font-size: 13px;
+            font-weight: bold;
+            flex-grow: 1;
+        }
+
+        .legend-toggle {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-left: 8px;
+        }
+
+        .legend-items {
+            margin-left: 20px;
+            font-size: 12px;
+            color: #b8a88a;
+        }
+
+        .legend-item {
+            padding: 3px 0;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .legend-item:hover {
+            color: #f0e6cc;
+        }
+
+        .legend-category.disabled .legend-dot {
+            opacity: 0.3;
+        }
+
+        .legend-category.disabled .legend-category-label {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        .legend-category.disabled .legend-items {
+            display: none;
+        }
+
+        #collapse-btn {
+            position: absolute;
+            top: 60px;
+            right: 16px;
+            z-index: 1001;
+            background: rgba(44, 36, 24, 0.95);
+            border: 2px solid #8b7355;
+            border-radius: 8px;
+            color: #d4c5a9;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        #collapse-btn:hover {
+            background: rgba(60, 48, 30, 0.95);
+            border-color: #d4c5a9;
+        }
+
+        .menu-icon {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .menu-icon span {
+            display: block;
+            width: 16px;
+            height: 2px;
+            background: #d4c5a9;
+            border-radius: 1px;
+        }
+
+        /* Custom marker styles */
+        .event-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .event-marker:hover {
+            transform: scale(1.3);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Popup styling */
+        .leaflet-popup-content-wrapper {
+            background: rgba(44, 36, 24, 0.97);
+            color: #d4c5a9;
+            border: 2px solid #8b7355;
+            border-radius: 8px;
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(44, 36, 24, 0.97);
+            border: 1px solid #8b7355;
+        }
+
+        .leaflet-popup-close-button {
+            color: #d4c5a9 !important;
+        }
+
+        .popup-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #e8d9b0;
+            margin-bottom: 6px;
+        }
+
+        .popup-book {
+            font-size: 11px;
+            color: #a89070;
+            margin-bottom: 6px;
+            font-style: italic;
+        }
+
+        .popup-description {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #c8b898;
+        }
+
+        .popup-characters {
+            font-size: 11px;
+            color: #a89070;
+            margin-top: 8px;
+            border-top: 1px solid #6b5b45;
+            padding-top: 6px;
+        }
+
+        /* Leaflet controls theming */
+        .leaflet-control-zoom a {
+            background: rgba(44, 36, 24, 0.95) !important;
+            color: #d4c5a9 !important;
+            border-color: #8b7355 !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: rgba(60, 48, 30, 0.95) !important;
+        }
+
+        /* Scrollbar styling for legend */
+        #legend::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #legend::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #legend::-webkit-scrollbar-thumb {
+            background: #8b7355;
+            border-radius: 3px;
+        }
+
+        /* Journey paths — marching ants */
+        @keyframes march {
+            to { stroke-dashoffset: -20; }
+        }
+
+        .journey-path {
+            animation: march 0.67s linear infinite;
+        }
+
+        /* Journey legend section */
+        .legend-divider {
+            border: none;
+            border-top: 1px solid #8b7355;
+            margin: 10px 0 8px;
+        }
+
+        .legend-journeys-title {
+            font-size: 12px;
+            color: #a89070;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .legend-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .legend-section-header .legend-journeys-title {
+            margin-bottom: 0;
+        }
+
+        .legend-section-toggle {
+            font-size: 11px;
+            color: #8b7355;
+            cursor: pointer;
+            user-select: none;
+            background: none;
+            border: 1px solid #5a4a36;
+            border-radius: 4px;
+            padding: 2px 7px;
+            font-family: inherit;
+            transition: color 0.2s, border-color 0.2s, background 0.2s;
+        }
+
+        .legend-section-toggle:hover {
+            color: #e8d9b0;
+            border-color: #8b7355;
+            background: rgba(90, 74, 54, 0.4);
+        }
+
+        .journey-toggle {
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .journey-toggle:hover {
+            color: #f0e6cc;
+        }
+
+        .journey-toggle.disabled {
+            opacity: 0.4;
+        }
+
+        .journey-line {
+            width: 24px;
+            height: 3px;
+            margin-right: 8px;
+            flex-shrink: 0;
+            border-top: 3px dashed;
+        }
+
+        .journey-label {
+            font-size: 12px;
+        }
+
+        .coord-toggle-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 0 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .coord-toggle-switch {
+            width: 32px;
+            height: 18px;
+            border-radius: 9px;
+            background: #5a4a36;
+            position: relative;
+            margin-right: 8px;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .coord-toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #8b7355;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .coord-toggle-row.active .coord-toggle-switch {
+            background: #6a9f5b;
+        }
+
+        .coord-toggle-row.active .coord-toggle-switch::after {
+            transform: translateX(14px);
+            background: #d4c5a9;
+        }
+
+        .coord-toggle-label {
+            font-size: 12px;
+            color: #a89070;
+            transition: color 0.2s;
+        }
+
+        .coord-toggle-row.active .coord-toggle-label {
+            color: #d4c5a9;
+        }
+
+        /* Instructions toast */
+        #toast {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(44, 36, 24, 0.92);
+            border: 1px solid #8b7355;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: #d4c5a9;
+            font-size: 13px;
+            opacity: 1;
+            transition: opacity 1s ease;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        #toast.hidden {
+            opacity: 0;
+        }
+
+        /* Splash overlay */
+        #splash-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease;
+        }
+        #splash-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .splash-card {
+            background: #2c2418;
+            border: 2px solid #8b7355;
+            border-radius: 10px;
+            padding: 32px 28px 24px;
+            max-width: 480px;
+            width: 90%;
+            color: #d4c5a9;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .splash-card h2 {
+            color: #e8d9b0;
+            font-size: 22px;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .splash-card p {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        .splash-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 16px;
+        }
+        .splash-card ul li {
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 3px 0 3px 16px;
+            position: relative;
+        }
+        .splash-card ul li::before {
+            content: '\00b7';
+            position: absolute;
+            left: 2px;
+            color: #8b7355;
+            font-weight: bold;
+        }
+        .splash-card .splash-disclaimer {
+            font-size: 11px;
+            color: #8b7355;
+            margin-top: 8px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        .splash-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #c9a435;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .splash-btn:hover {
+            background: #d4b445;
+        }
+
+        /* Info button */
+        #info-btn {
+            position: fixed;
+            bottom: 32px;
+            right: 16px;
+            z-index: 1000;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(44, 36, 24, 0.9);
+            border: 1px solid #8b7355;
+            color: #8b7355;
+            font-size: 14px;
+            font-family: Georgia, serif;
+            font-style: italic;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        #info-btn:hover {
+            color: #e8d9b0;
+            border-color: #d4c5a9;
+        }
+
+        /* Copyright disclaimer */
+        #map-copyright {
+            position: fixed;
+            bottom: 8px;
+            right: 16px;
+            z-index: 1000;
+            font-size: 10px;
+            color: #8b7355;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        /* Distance measure tool */
+        .measure-active #map { cursor: crosshair; }
+
+        #measure-display {
+            position: absolute;
+            bottom: 60px;
+            left: 16px;
+            z-index: 1000;
+            background: rgba(44, 36, 24, 0.95);
+            border: 2px solid #8b7355;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #d4c5a9;
+            font-size: 13px;
+            font-family: monospace;
+            pointer-events: none;
+            display: none;
+        }
+    </style>
+</link></head>
+<body>
+<nav id="nav-bar">
+<a class="nav-link active" href="index.html">🗺︎ 地圖</a>
+<a class="nav-link" href="adventure.html">⚔ 冒險</a>
+<span class="nav-title">中土世界</span>
+<a class="nav-link" href="timeline.html">⏳︎ 時間軸</a>
+</nav>
+<main>
+<div id="map"></div>
+<div id="legend">
+<h2>Events of Middle-earth<button id="legend-close">×</button></h2>
+<div id="legend-content"></div>
+</div>
+<button id="collapse-btn"><div class="menu-icon"><span></span><span></span><span></span></div> Legend</button>
+<div id="measure-display"></div>
+<div id="toast">滾動縮放·拖曳平移·單擊標記查看詳細信息</div>
+<div class="hidden" id="splash-overlay">
+<div class="splash-card">
+<h2>歡迎來到中土世界</h2>
+<p>托爾金的中土世界的互動式地圖，將整個傳說中的事件繪製為標記。</p>
+<ul>
+<li>Click markers to read about key events</li>
+<li>Use the Legend panel to filter by book or toggle journey paths</li>
+<li>Enable “Measure distance” in the Legend to measure between two points</li>
+<li>Visit the <a href="timeline.html" style="color:#c9a435;">時間軸頁面</a> for a chronological view</li>
+</ul>
+<p class="splash-disclaimer">底圖圖像源自互聯網，此處用於粉絲/教育目的。我們不主張地圖藝術品的版權。</p>
+<button class="splash-btn" id="splash-enter">進入中土世界</button>
+</div>
+</div>
+<button id="info-btn" title="About this map">我</button>
+<div id="map-copyright">地圖藝術品不屬於該項目所有，僅用於粉絲/教育目的。</div>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js"></script>
+<script>
+        // Events, COLORS, CATEGORY_LABELS, CATEGORY_ICONS, FELLOWSHIP_PATH,
+        // JOURNEYS, IMG_W, IMG_H loaded from data.js
+
+        // ── Helper: pixel coords → Leaflet coords ──────
+        function toLatLng(px, py) {
+            return [py, px];
+        }
+
+        // ── Map Setup ───────────────────────────────────
+        const MapCRS = L.Util.extend({}, L.CRS.Simple, {
+            transformation: new L.Transformation(1, 0, 1, 0)
+        });
+
+        const map = L.map('map', {
+            crs: MapCRS,
+            minZoom: -4,
+            maxZoom: 3,
+            zoomSnap: 0.25,
+            zoomDelta: 0.5,
+            wheelPxPerZoomLevel: 120,
+            attributionControl: false
+        });
+
+        const bounds = [[0, 0], [IMG_H, IMG_W]];
+        const tileOpts = {
+            minZoom: -4,
+            maxZoom: 3,
+            maxNativeZoom: 0,
+            minNativeZoom: -2,
+            zoomOffset: 2,
+            tileSize: 256,
+            noWrap: true,
+            bounds: bounds
+        };
+        const mapTiles = L.tileLayer('tiles/{z}/{x}/{y}.jpg', tileOpts).addTo(map);
+        const satTiles = L.tileLayer('tiles-sat/{z}/{x}/{y}.jpg', tileOpts);
+        map.fitBounds(bounds);
+        const PAD = Math.max(IMG_W, IMG_H);
+        map.setMaxBounds([[-PAD, -PAD], [IMG_H + PAD, IMG_W + PAD]]);
+
+        // ── Create Markers ──────────────────────────────
+        const categoryLayers = {
+            silmarillion: L.layerGroup(),
+            hobbit: L.layerGroup(),
+            fellowship: L.layerGroup(),
+            towers: L.layerGroup(),
+            king: L.layerGroup(),
+            appendix: L.layerGroup()
+        };
+
+        events.forEach(evt => {
+            const latlng = toLatLng(evt.px, evt.py);
+            const color = COLORS[evt.category];
+            const icon = L.divIcon({
+                className: '',
+                html: `<div class="event-marker" style="
+                    width: 22px; height: 22px;
+                    background: radial-gradient(circle at 35% 35%, ${color}, ${darken(color, 40)});
+                ">${CATEGORY_ICONS[evt.category]}</div>`,
+                iconSize: [22, 22],
+                iconAnchor: [11, 11],
+                popupAnchor: [0, -14]
+            });
+
+            const marker = L.marker(latlng, { icon })
+                .bindPopup(`
+                    <div style="max-width: 260px;">
+                        <div class="popup-title">${evt.name}</div>
+                        <div class="popup-book">${CATEGORY_LABELS[evt.category]}</div>
+                        <div class="popup-description">${evt.description}</div>
+                        <div class="popup-characters"><strong>Key figures:</strong> ${evt.characters}</div>
+                    </div>
+                `, { maxWidth: 300, autoPanPaddingTopLeft: L.point(10, 54) });
+
+            marker._eventData = evt;
+            categoryLayers[evt.category].addLayer(marker);
+        });
+
+        Object.values(categoryLayers).forEach(layer => layer.addTo(map));
+
+        // Catmull-Rom spline interpolation for smooth journey paths
+        // Only interpolate segments longer than minDist to avoid loops on close points
+        // Points with a truthy third element (e.g. [x, y, 1]) are always smoothed
+        function smoothPoints(points, segments = 6, minDist = 100) {
+            if (points.length < 3) return points;
+            const result = [];
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const forceSmooth = p1[2] && p2[2];
+                if (!forceSmooth) {
+                    const dx = p2[0] - p1[0];
+                    const dy = p2[1] - p1[1];
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) {
+                        result.push(p1);
+                        continue;
+                    }
+                }
+                const p0 = points[Math.max(0, i - 1)];
+                const p3 = points[Math.min(points.length - 1, i + 2)];
+                for (let t = 0; t < segments; t++) {
+                    const tt = t / segments;
+                    const tt2 = tt * tt;
+                    const tt3 = tt2 * tt;
+                    result.push([
+                        0.5 * ((2*p1[0]) + (-p0[0]+p2[0])*tt + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*tt2 + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*tt3),
+                        0.5 * ((2*p1[1]) + (-p0[1]+p2[1])*tt + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*tt2 + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*tt3)
+                    ]);
+                }
+            }
+            result.push(points[points.length - 1]);
+            return result;
+        }
+
+        const journeyLayers = {};
+
+        Object.keys(JOURNEYS).forEach(key => {
+            const journey = JOURNEYS[key];
+            const lines = [];
+            const smoothed = smoothPoints(journey.points);
+            const latlngs = smoothed.map(([px, py]) => toLatLng(px, py));
+            lines.push(L.polyline(latlngs, {
+                color: journey.color,
+                weight: 3,
+                dashArray: '10 6',
+                opacity: 0.7,
+                className: 'journey-path'
+            }));
+            if (journey.branches) {
+                Object.values(journey.branches).forEach(branch => {
+                    const branchPoints = Array.isArray(branch) ? branch : branch.points;
+                    const branchColor = Array.isArray(branch) ? journey.color : (branch.color || journey.color);
+                    const smoothedBranch = smoothPoints(branchPoints);
+                    const branchLatLngs = smoothedBranch.map(([px, py]) => toLatLng(px, py));
+                    lines.push(L.polyline(branchLatLngs, {
+                        color: branchColor,
+                        weight: 3,
+                        dashArray: '10 6',
+                        opacity: 0.7,
+                        className: 'journey-path'
+                    }));
+                });
+            }
+            journeyLayers[key] = L.layerGroup(lines);
+        });
+
+        // ── Legend ───────────────────────────────────────
+        const legendEl = document.getElementById('legend-content');
+
+        // ── Journey Toggles (top of legend) ───────────
+        const journeyHeader = document.createElement('div');
+        journeyHeader.className = 'legend-section-header';
+        const journeyTitle = document.createElement('div');
+        journeyTitle.className = 'legend-journeys-title';
+        journeyTitle.textContent = 'Journeys';
+        const journeyClearBtn = document.createElement('button');
+        journeyClearBtn.className = 'legend-section-toggle';
+        journeyClearBtn.textContent = 'show all';
+        journeyHeader.appendChild(journeyTitle);
+        journeyHeader.appendChild(journeyClearBtn);
+        legendEl.appendChild(journeyHeader);
+
+        const journeyToggles = [];
+        Object.keys(JOURNEYS).forEach(key => {
+            const journey = JOURNEYS[key];
+            const toggle = document.createElement('div');
+            toggle.className = 'journey-toggle disabled';
+            toggle.dataset.key = key;
+            toggle.innerHTML = `
+                <div class="journey-line" style="border-color: ${journey.color};"></div>
+                <span class="journey-label">${journey.label}</span>
+            `;
+            toggle.addEventListener('click', () => {
+                toggle.classList.toggle('disabled');
+                if (toggle.classList.contains('disabled')) {
+                    map.removeLayer(journeyLayers[key]);
+                } else {
+                    map.addLayer(journeyLayers[key]);
+                }
+                updateJourneyClearBtn();
+            });
+            journeyToggles.push(toggle);
+            legendEl.appendChild(toggle);
+        });
+
+        function updateJourneyClearBtn() {
+            const anyEnabled = journeyToggles.some(t => !t.classList.contains('disabled'));
+            journeyClearBtn.textContent = anyEnabled ? 'clear all' : 'show all';
+        }
+
+        journeyClearBtn.addEventListener('click', () => {
+            const anyEnabled = journeyToggles.some(t => !t.classList.contains('disabled'));
+            journeyToggles.forEach(toggle => {
+                const key = toggle.dataset.key;
+                if (anyEnabled) {
+                    toggle.classList.add('disabled');
+                    map.removeLayer(journeyLayers[key]);
+                } else {
+                    toggle.classList.remove('disabled');
+                    map.addLayer(journeyLayers[key]);
+                }
+            });
+            updateJourneyClearBtn();
+        });
+
+        const divider = document.createElement('hr');
+        divider.className = 'legend-divider';
+        legendEl.appendChild(divider);
+
+        // ── Book Categories ────────────────────────────
+        const eventsHeader = document.createElement('div');
+        eventsHeader.className = 'legend-section-header';
+        const eventsTitle = document.createElement('div');
+        eventsTitle.className = 'legend-journeys-title';
+        eventsTitle.textContent = 'Events';
+        const eventsClearBtn = document.createElement('button');
+        eventsClearBtn.className = 'legend-section-toggle';
+        eventsClearBtn.textContent = 'clear all';
+        eventsHeader.appendChild(eventsTitle);
+        eventsHeader.appendChild(eventsClearBtn);
+        legendEl.appendChild(eventsHeader);
+
+        const categoryDivs = [];
+        Object.keys(CATEGORY_LABELS).forEach(cat => {
+            const catEvents = events.filter(e => e.category === cat);
+
+            const div = document.createElement('div');
+            div.className = 'legend-category';
+            div.dataset.category = cat;
+
+            div.innerHTML = `
+                <div class="legend-category-header">
+                    <div class="legend-dot" style="background: ${COLORS[cat]};"></div>
+                    <span class="legend-category-label">${CATEGORY_LABELS[cat]}</span>
+                    <span class="legend-toggle">&#9660;</span>
+                </div>
+                <div class="legend-items">
+                    ${catEvents.map((e, i) => `<div class="legend-item" data-index="${events.indexOf(e)}">${e.name.split('—')[0].trim()}</div>`).join('')}
+                </div>
+            `;
+
+            // Toggle category visibility
+            div.querySelector('.legend-category-header').addEventListener('click', () => {
+                div.classList.toggle('disabled');
+                const toggle = div.querySelector('.legend-toggle');
+                if (div.classList.contains('disabled')) {
+                    map.removeLayer(categoryLayers[cat]);
+                    toggle.innerHTML = '&#9654;';
+                } else {
+                    map.addLayer(categoryLayers[cat]);
+                    toggle.innerHTML = '&#9660;';
+                }
+                updateEventsClearBtn();
+            });
+
+            // Click legend item to fly to marker
+            div.querySelectorAll('.legend-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const evt = events[parseInt(item.dataset.index)];
+                    const latlng = toLatLng(evt.px, evt.py);
+                    map.flyTo(latlng, 1, { duration: 0.8 });
+
+                    // Open the popup
+                    categoryLayers[evt.category].eachLayer(marker => {
+                        if (marker._eventData === evt) {
+                            setTimeout(() => marker.openPopup(), 400);
+                        }
+                    });
+                });
+            });
+
+            categoryDivs.push(div);
+            legendEl.appendChild(div);
+        });
+
+        function updateEventsClearBtn() {
+            const anyEnabled = categoryDivs.some(d => !d.classList.contains('disabled'));
+            eventsClearBtn.textContent = anyEnabled ? 'clear all' : 'show all';
+        }
+
+        eventsClearBtn.addEventListener('click', () => {
+            const anyEnabled = categoryDivs.some(d => !d.classList.contains('disabled'));
+            categoryDivs.forEach(div => {
+                const cat = div.dataset.category;
+                const toggle = div.querySelector('.legend-toggle');
+                if (anyEnabled) {
+                    div.classList.add('disabled');
+                    map.removeLayer(categoryLayers[cat]);
+                    toggle.innerHTML = '&#9654;';
+                } else {
+                    div.classList.remove('disabled');
+                    map.addLayer(categoryLayers[cat]);
+                    toggle.innerHTML = '&#9660;';
+                }
+            });
+            updateEventsClearBtn();
+        });
+
+        // ── Coordinate Toggle (bottom of legend) ──────
+        const coordDivider = document.createElement('hr');
+        coordDivider.className = 'legend-divider';
+        legendEl.appendChild(coordDivider);
+
+        let coordsEnabled = true;
+        const coordToggleRow = document.createElement('div');
+        coordToggleRow.className = 'coord-toggle-row active';
+        coordToggleRow.innerHTML = `
+            <div class="coord-toggle-switch"></div>
+            <span class="coord-toggle-label">Show coordinates</span>
+        `;
+        coordToggleRow.addEventListener('click', () => {
+            coordsEnabled = !coordsEnabled;
+            coordToggleRow.classList.toggle('active', coordsEnabled);
+            if (!coordsEnabled) {
+                coordDisplay.style.display = 'none';
+            }
+        });
+        legendEl.appendChild(coordToggleRow);
+
+        // ── Distance Measure Tool ───────────────────
+        const PIXELS_PER_MILE = 4.05;
+        const MILES_PER_LEAGUE = 3;
+
+        let measureEnabled = false;
+        let measurePoints = [];
+        let measureLayers = [];
+        const measureDisplay = document.getElementById('measure-display');
+
+        const measureToggleRow = document.createElement('div');
+        measureToggleRow.className = 'coord-toggle-row';
+        measureToggleRow.innerHTML = `
+            <div class="coord-toggle-switch"></div>
+            <span class="coord-toggle-label">Measure distance</span>
+        `;
+        measureToggleRow.addEventListener('click', () => {
+            measureEnabled = !measureEnabled;
+            measureToggleRow.classList.toggle('active', measureEnabled);
+            document.body.classList.toggle('measure-active', measureEnabled);
+            if (!measureEnabled) clearMeasure();
+        });
+        legendEl.appendChild(measureToggleRow);
+
+        // ── Satellite View Toggle ─────────────────────
+        const satToggleRow = document.createElement('div');
+        satToggleRow.className = 'coord-toggle-row';
+        satToggleRow.innerHTML = `
+            <div class="coord-toggle-switch"></div>
+            <span class="coord-toggle-label">Satellite view</span>
+        `;
+        satToggleRow.addEventListener('click', () => {
+            const active = satToggleRow.classList.toggle('active');
+            if (active) {
+                map.removeLayer(mapTiles);
+                map.addLayer(satTiles);
+            } else {
+                map.removeLayer(satTiles);
+                map.addLayer(mapTiles);
+            }
+        });
+        legendEl.appendChild(satToggleRow);
+
+        function clearMeasure() {
+            measurePoints = [];
+            measureLayers.forEach(l => map.removeLayer(l));
+            measureLayers = [];
+            measureDisplay.style.display = 'none';
+        }
+
+        map.on('click', function(e) {
+            if (!measureEnabled) return;
+
+            // Third click — clear and start fresh
+            if (measurePoints.length >= 2) clearMeasure();
+
+            measurePoints.push(e.latlng);
+
+            // Place circle marker at clicked point
+            const circle = L.circleMarker(e.latlng, {
+                radius: 5,
+                color: '#c9a435',
+                fillColor: '#c9a435',
+                fillOpacity: 0.8,
+                weight: 2
+            }).addTo(map);
+            measureLayers.push(circle);
+
+            // Second click — draw line and show distance
+            if (measurePoints.length === 2) {
+                const line = L.polyline(measurePoints, {
+                    color: '#c9a435',
+                    weight: 2,
+                    dashArray: '8 6',
+                    opacity: 0.8
+                }).addTo(map);
+                measureLayers.push(line);
+
+                const pxA = measurePoints[0];
+                const pxB = measurePoints[1];
+                const dx = pxA.lng - pxB.lng;
+                const dy = pxA.lat - pxB.lat;
+                const pxDist = Math.sqrt(dx * dx + dy * dy);
+                const miles = pxDist / PIXELS_PER_MILE;
+                const leagues = miles / MILES_PER_LEAGUE;
+
+                measureDisplay.textContent = `A \u2192 B: ${Math.round(miles)} miles (${leagues.toFixed(1)} leagues)`;
+                measureDisplay.style.display = 'block';
+            }
+        });
+
+        // ── Legend Collapse ────────────────────
+        const legend = document.getElementById('legend');
+        const collapseBtn = document.getElementById('collapse-btn');
+        const legendClose = document.getElementById('legend-close');
+
+        function hideLegend() {
+            legend.style.display = 'none';
+            collapseBtn.style.display = 'flex';
+        }
+
+        function showLegend() {
+            legend.style.display = 'block';
+            collapseBtn.style.display = 'none';
+        }
+
+        legendClose.addEventListener('click', hideLegend);
+        collapseBtn.addEventListener('click', showLegend);
+
+        // Auto-collapse on mobile
+        if (window.innerWidth < 600) {
+            hideLegend();
+        }
+
+        // Close legend on map click (mobile)
+        map.on('click', () => {
+            if (window.innerWidth < 600) {
+                hideLegend();
+            }
+        });
+
+        // ── Coordinate Picker (calibration tool) ────────
+        const coordDisplay = document.createElement('div');
+        coordDisplay.id = 'coord-display';
+        coordDisplay.style.cssText = 'position:absolute;bottom:24px;left:16px;z-index:1000;background:rgba(44,36,24,0.95);border:2px solid #8b7355;border-radius:8px;padding:10px 14px;color:#d4c5a9;font-size:13px;font-family:monospace;pointer-events:none;display:none;';
+        document.body.appendChild(coordDisplay);
+
+        map.on('click', function(e) {
+            if (!coordsEnabled) return;
+            const px = Math.round(e.latlng.lng);
+            const py = Math.round(e.latlng.lat);
+            coordDisplay.style.display = 'block';
+            coordDisplay.textContent = `px: ${px}, py: ${py}`;
+            console.log(`{ px: ${px}, py: ${py} }`);
+        });
+
+        map.on('contextmenu', function(e) {
+            if (!coordsEnabled) return;
+            const px = Math.round(e.latlng.lng);
+            const py = Math.round(e.latlng.lat);
+            const text = `px: ${px}, py: ${py}`;
+            navigator.clipboard.writeText(text);
+            coordDisplay.style.display = 'block';
+            coordDisplay.textContent = `${text}  (copied)`;
+        });
+
+        // ── Toast auto-hide ─────────────────────────────
+        setTimeout(() => {
+            document.getElementById('toast').classList.add('hidden');
+        }, 5000);
+
+        // ── Utility: darken a hex color ─────────────────
+        function darken(hex, amount) {
+            hex = hex.replace('#', '');
+            const r = Math.max(0, parseInt(hex.substring(0, 2), 16) - amount);
+            const g = Math.max(0, parseInt(hex.substring(2, 4), 16) - amount);
+            const b = Math.max(0, parseInt(hex.substring(4, 6), 16) - amount);
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        }
+
+        // ── Cross-page navigation (from timeline) ─────
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const fly = params.get('fly');
+            const eventName = params.get('event');
+            if (fly) {
+                const [px, py] = fly.split(',').map(Number);
+                const latlng = toLatLng(px, py);
+                setTimeout(() => {
+                    map.flyTo(latlng, 1, { duration: 1.2 });
+                    if (eventName) {
+                        Object.values(categoryLayers).forEach(layer => {
+                            layer.eachLayer(marker => {
+                                if (marker.getPopup() && marker.getPopup().getContent().includes(eventName)) {
+                                    setTimeout(() => marker.openPopup(), 1200);
+                                }
+                            });
+                        });
+                    }
+                }, 500);
+            }
+
+            // ?view=satellite activates satellite tiles on load
+            if (params.get('view') === 'satellite') {
+                map.removeLayer(mapTiles);
+                map.addLayer(satTiles);
+                satToggleRow.classList.add('active');
+            }
+        })();
+
+        // ── Splash Screen ────────────────────────────────
+        (function() {
+            const overlay = document.getElementById('splash-overlay');
+            const enterBtn = document.getElementById('splash-enter');
+            const infoBtn = document.getElementById('info-btn');
+
+            function showSplash() {
+                overlay.style.display = 'flex';
+                // Force reflow so transition triggers
+                overlay.offsetHeight;
+                overlay.classList.remove('hidden');
+            }
+
+            function hideSplash() {
+                overlay.classList.add('hidden');
+                localStorage.setItem('me-map-welcomed', '1');
+                overlay.addEventListener('transitionend', function handler() {
+                    overlay.style.display = 'none';
+                    overlay.removeEventListener('transitionend', handler);
+                });
+            }
+
+            if (!localStorage.getItem('me-map-welcomed')) {
+                showSplash();
+            }
+
+            enterBtn.addEventListener('click', hideSplash);
+            infoBtn.addEventListener('click', showSplash);
+        })();
+
+    </script>
+</body>
+</html>

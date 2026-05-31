@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://middle-earth-interactive-map.web.app/sitemap.xml

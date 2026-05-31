@@ -1,0 +1,17 @@
+# Development tools
+art-server.js
+generate_tiles.py
+generate_sat_tiles.py
+generate_sat_ai.py
+
+# Build artifacts
+locations.csv
+middle_earth.jpeg
+node_modules/
+
+# Firebase
+firebase.json
+google691865e86eca1694.html
+
+# OS
+.DS_Store
